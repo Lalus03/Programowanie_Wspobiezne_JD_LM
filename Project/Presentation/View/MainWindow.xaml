@@ -5,42 +5,70 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:viewmodel="clr-namespace:ViewModel;assembly=ViewModel"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="820">
+        Title="MainWindow" Height="450" Width="820"
+        MinWidth="600" MinHeight="400">
     <Window.DataContext>
         <viewmodel:ViewModel/>
     </Window.DataContext>
-    <Border Padding="35">
-        <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="300"/>
-                <RowDefinition Height="60"/>
-            </Grid.RowDefinitions>
-            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center">
-                <Button Content="start simulation" Height="20" VerticalAlignment="Center" Margin="230, 10, 50, 20" Command="{Binding startSimulation}" />
-                <StackPanel Margin="0, 0, 0, 20">
-                    <TextBlock Text="Ilość KUL" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                    <TextBox VerticalAlignment="Center" Width="100" Text="{Binding chooseBallAmount}"/>
-                </StackPanel>
-                <Button Content="stop simulation"  Height="20" VerticalAlignment="Center" Margin="50, 10, 230, 20" Command="{Binding stopSimulation}"/>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <!-- Płynnie zajmuje dostępne miejsce -->
+            <RowDefinition Height="Auto" />
+            <!-- Przyciski dopasowują się -->
+        </Grid.RowDefinitions>
+
+        <!-- Skaluje Canvas i kule -->
+        <Viewbox Stretch="Fill" Grid.Row="0">
+            <Canvas Background="#155843" Width="700" Height="300">
+                <ItemsControl ItemsSource="{Binding ballsToDraw, UpdateSourceTrigger=PropertyChanged}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <Canvas />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemContainerStyle>
+                        <Style TargetType="ContentPresenter">
+                            <Setter Property="Canvas.Left" Value="{Binding x}" />
+                            <Setter Property="Canvas.Top" Value="{Binding y}" />
+                        </Style>
+                    </ItemsControl.ItemContainerStyle>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Ellipse Width="10" Height="10" Fill="Red"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Canvas>
+        </Viewbox>
+
+        <!-- Panel przycisków i textboxa -->
+        <Grid Grid.Row="1" Margin="0,20,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Button Grid.Column="0"
+                    Content="start simulation"
+                    Margin="10"
+                    VerticalAlignment="Center"
+                    Padding="10,5"
+                    Command="{Binding startSimulation}" />
+
+            <StackPanel Grid.Column="1" Orientation="Vertical" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="20,0">
+                <TextBlock Text="Ilość KUL" HorizontalAlignment="Center"/>
+                <TextBox Width="100" Text="{Binding chooseBallAmount}" HorizontalAlignment="Center"/>
             </StackPanel>
-            <ItemsControl Height="300" Margin="0,0,0,0" ItemsSource="{Binding ballsToDraw, UpdateSourceTrigger=PropertyChanged}">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <Canvas Name="Canvas" Width="700" Height="300" Background="#155843"></Canvas>
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemContainerStyle>
-                    <Style TargetType="ContentPresenter">
-                        <Setter Property="Canvas.Left" Value="{Binding x}"/>
-                        <Setter Property="Canvas.Top" Value="{Binding y}"/>
-                    </Style>
-                </ItemsControl.ItemContainerStyle>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Ellipse Height="10" Width="10" Fill="Red"></Ellipse>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+
+            <Button Grid.Column="2"
+                    Content="stop simulation"
+                    Margin="10"
+                    VerticalAlignment="Center"
+                    Padding="10,5"
+                    Command="{Binding stopSimulation}" />
         </Grid>
-    </Border>
+    </Grid>
 </Window>
