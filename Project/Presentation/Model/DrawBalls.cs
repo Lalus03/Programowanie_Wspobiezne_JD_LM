@@ -1,10 +1,12 @@
-﻿using Logic;
+﻿using Data;
+using Logic;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,48 +14,65 @@ using System.Threading.Tasks;
 
 namespace Model
 {
-    internal class DrawBalls : IBall
+    internal class DrawBalls : IBall, INotifyPropertyChanged
     {
-        public event PropertyChangedEventHandler PropertyChanged;
+        private Vector2 _pos;
+        #nullable enable
+        public event EventHandler<ModelEventArgs>? ChangedPosition;
         private LogicAbstractAPI api;
-        private float X;
-        private float Y;
-        public LogicAbstractAPI Api { get => api; set => api = value; }
 
-        public float x {
-            get { return X; } 
-            set
-            {
-                if (X != value)
-                {
-                    X = value;
-                    RaisePropertyChanged(); 
-                    
-                }
-            } 
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        public double x
+        {
+            get { return _pos.X; } 
+            set { 
+                _pos.X = (float)value;
+                RaisePropertyChanged();
+            }
         }
-
-        public float y {
-            get { return Y; }
+        public double y
+        {
+            get { return _pos.Y; }
             set
             {
-                if (Y != value)
+                _pos.Y = (float)value;
+                RaisePropertyChanged();
+            }
+        }
+        public Vector2 pos
+        {
+            get { return _pos; }
+            internal set
+            {
+                if(_pos != value)
                 {
-                    Y = value;
+                    _pos = value;
                     RaisePropertyChanged();
                 }
             }
         }
+        public LogicAbstractAPI Api { get; set; }
 
         public float r { get; internal set; }
 
-        public DrawBalls(float xpos, float ypos)
+        public DrawBalls(Vector2 pos)
         {
-            this.X = xpos;
-            this.Y = ypos;
+            this.pos = pos;
         }
 
-        private void RaisePropertyChanged([CallerMemberName] string propertyName = "")
+        private void OnPropertyChanged(ModelEventArgs args)
+        {
+            ChangedPosition?.Invoke(this, args);
+        }
+        public void UpdateDrawBalls(Object s, ModelEventArgs e)
+        {
+            IBall ball = (IBall)s;
+            x = ball.pos.X;
+            y = ball.pos.Y;
+        }
+
+        public void RaisePropertyChanged([CallerMemberName] string? propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }

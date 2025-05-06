@@ -1,11 +1,11 @@
-﻿
-using Logic;
+﻿using Logic;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Numerics;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Runtime.InteropServices;
@@ -21,12 +21,12 @@ namespace Model
         {
             return new Model();
         }
-
         public abstract void StartSimulation();
         public abstract void StopSimulation();
         public abstract IDisposable Subscribe(IObserver<IBall> observer);
         public abstract IBall[] getballs();
-        public abstract event PropertyChangedEventHandler PropertyChanged;
+        #nullable enable
+        public abstract event EventHandler<ModelEventArgs>? ChangedPosition;
         public abstract void getBoardParameters(int x, int y, int ballsAmount);
     }
 
@@ -35,19 +35,21 @@ namespace Model
     {
         private IObservable<EventPattern<BallChangeEventArgs>> eventObservable = null;
         public LogicAbstractAPI simulation { get; set; }
-        public override event PropertyChangedEventHandler PropertyChanged;
+        #nullable enable
+        public override event EventHandler<ModelEventArgs>? ChangedPosition;
         public event EventHandler<BallChangeEventArgs> BallChanged;
         public IObservable<EventHandler> ballsChanged;
         DrawBalls[] drawBalls;
         public override void getBoardParameters(int x, int y, int ballsAmount)
         {
             simulation.getBoardParameters(x, y, ballsAmount);
-            drawBalls = new DrawBalls[ballsAmount]; 
+            drawBalls = new DrawBalls[ballsAmount];
+            Vector2[] poss = simulation.getCoordinates();
             for (int i = 0; i < ballsAmount; i++)
             {
-                DrawBalls ball = new DrawBalls(simulation.getCoordinates()[i][0], simulation.getCoordinates()[i][1]);
+                DrawBalls ball = new DrawBalls(poss[i]);
                 drawBalls[i] = ball;
-                simulation.PropertyChanged += OnBallChanged; //send update to upper level
+                simulation.ChangedPosition += OnBallChanged;
             }
         }
 
@@ -74,20 +76,31 @@ namespace Model
             simulation = api;
         }
 
-        private void OnBallChanged(object sender, PropertyChangedEventArgs args)
+        private void OnBallChanged(object sender, LogicEventArgs e)
         {
-            //reaction to update from layers below
-            if (drawBalls[0].x != simulation.getCoordinates()[0][0] && drawBalls[0].y != simulation.getCoordinates()[0][1])
+            LogicAbstractAPI api = (LogicAbstractAPI)sender;
+            Data.IBall[] balls = api.getBalls();
+            foreach (Data.IBall ball in balls)
             {
                 UpdatePosition();
             }
         }
         private void UpdatePosition()
         {
-            for(int i = 0; i < simulation.getCoordinates().Length; i++)
+            for (int i = 0; i < simulation.getCoordinates().Length; i++)
             {
-                drawBalls[i].x = simulation.getCoordinates()[i][0];
-                drawBalls[i].y = simulation.getCoordinates()[i][1];
+                Vector2 pos = simulation.getCoordinates()[i];
+
+                // Dodanie sprawdzenia null
+                if (drawBalls[i] != null)
+                {
+                    drawBalls[i].x = pos.X;
+                    drawBalls[i].y = pos.Y;
+                }
+                else
+                {
+                    Debug.WriteLine($"drawBalls[{i}] jest null.");
+                }
             }
         }
 
@@ -103,10 +116,11 @@ namespace Model
             simulation.stopSimulation();
         }
         
-
+        //source: https://github.com/mpostol/TP
+        //presentation model sublayers are heavily inspired by that source, but implemented to fit our code
         public override IDisposable Subscribe(IObserver<IBall> observer)
         {
-            return eventObservable.Subscribe(x => observer.OnNext(x.EventArgs.Ball), ex => observer.OnError(ex), () => observer.OnCompleted());
+            return eventObservable.Subscribe(x => observer.OnNext(x.EventArgs.Ball), ex => observer.OnError(ex), observer.OnCompleted);
         }
     }
 }

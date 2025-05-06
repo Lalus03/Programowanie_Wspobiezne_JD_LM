@@ -6,7 +6,9 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Numerics;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,8 +18,8 @@ using System.Windows.Media.Media3D;
 
 namespace ViewModel
 {
-    
-    public class ViewModel : INotifyPropertyChanged
+    //this class has to stay public, so that MainWindow.xaml can access it
+    public class ViewModel
     {
         public ICommand startSimulation { get; set; }
         public ICommand stopSimulation { get; set; }
@@ -28,22 +30,16 @@ namespace ViewModel
         
         public ViewModel()
         {
-           
+            //DI is not really doable here
             startSimulation = new RelayCommand(startSimulationHandler);
             stopSimulation = new RelayCommand(stopSimulationHandler);
-        }
-
-        public event PropertyChangedEventHandler PropertyChanged;
-        protected virtual void OnPropertyChanged(string propertyName)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
         private void startSimulationHandler(object obj)
         {
             api = ModelAbstractAPI.CreateModelAPI();
             getBoardParameters(700, 300, amount);
-            IDisposable observer = api.Subscribe<Model.IBall>(x => ballsToDraw.Add(x)); 
+            IDisposable observer = api.Subscribe(x => ballsToDraw.Add(x)); //look at ModelAPI.cs@89
             foreach (Model.IBall b in api.getballs())
             {
                 ballsToDraw.Add(b);
@@ -58,6 +54,7 @@ namespace ViewModel
         private void stopSimulationHandler(object obj)
         {
             api.StopSimulation();
+            ballsToDraw.Clear();
         }
 
         public int chooseBallAmount

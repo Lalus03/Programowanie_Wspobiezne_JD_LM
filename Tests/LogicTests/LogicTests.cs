@@ -3,43 +3,28 @@ using Logic;
 using NUnit.Framework;
 using System;
 using System.ComponentModel;
+using System.Drawing;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace LogicTests
 {
     public class TestBall : IBall
     {
-        public float x { get; set; }
-        public float y { get; set; }
-        
-        private float Xvelocity;
-        private float Yvelocity;
+        public Vector2 pos { get; set; }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public Vector2 vel { get ; set; }
+
+        private float density;
+        private float size;
+
+        public event EventHandler<DataEventArgs>? ChangedPosition;
 
         public TestBall(float x, float y, float Xvelocity, float Yvelocity)
         {
-            this.x = x;
-            this.y = y;
-            this.Xvelocity = Xvelocity;
-            this.Yvelocity = Yvelocity;
-        }
-
-        public float getXVelocity()
-        {
-            return Xvelocity;
-        }
-        public float getYVelocity()
-        {
-            return Yvelocity;
-        }
-        public void setXVelocity(float xVelocity)
-        {
-            this.Xvelocity=xVelocity;
-        }
-        public void setYVelocity(float yVelocity)
-        {
-            this.Yvelocity = yVelocity;
+            Vector2 pos = new Vector2(x, y);
+            Vector2 vel = new Vector2(Xvelocity, Yvelocity);
+            this.pos = pos; this.vel = vel;
         }
 
         public float getSize()
@@ -47,9 +32,21 @@ namespace LogicTests
             throw new NotImplementedException();
         }
 
-        public void RaisePropertyChanged([CallerMemberName] string propertyName = null)
+
+        public float getMass()
         {
-            this.PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            return (float)(4 / 3 * Math.PI * Math.Pow(size, 3)) * density; // TODO
+        }
+        public void move()
+        {
+            this.pos += vel;
+            DataEventArgs args = new DataEventArgs(pos);
+            ChangedPosition?.Invoke(this, args);
+        }
+
+        public void destroy()
+        {
+            throw new NotImplementedException();
         }
     }
 
@@ -70,7 +67,7 @@ namespace LogicTests
             Logic.Logic.changeXdirection(ball);
 
             // Assert
-            Assert.That(ball.getXVelocity(), Is.EqualTo(-0.5f));
+            Assert.That(ball.vel.X, Is.EqualTo(-0.5f));
         }
 
         [Test]
@@ -87,7 +84,7 @@ namespace LogicTests
             Logic.Logic.changeYdirection(ball);
 
             // Assert
-            Assert.That(ball.getYVelocity(), Is.EqualTo(-0.5f));
+            Assert.That(ball.vel.Y, Is.EqualTo(-0.5f));
         }
 
         [Test]
@@ -101,34 +98,11 @@ namespace LogicTests
             api.setBalls(balls);
 
             // Act
-            Logic.Logic.updatePosition(ball);
+            ball.move();
 
             // Assert
-            Assert.That(ball.x, Is.EqualTo(50.5f));
-            Assert.That(ball.y, Is.EqualTo(50.5f));
+            Assert.That(ball.pos.X, Is.EqualTo(50.5f));
+            Assert.That(ball.pos.Y, Is.EqualTo(50.5f));
         }
-
-        /*[Test]
-        public void updateBoardTest()
-        {
-            // Arrange
-            LogicAbstractAPI api = LogicAbstractAPI.CreateLogicAPI();
-            TestBall[] balls = new TestBall[3];
-            TestBall ball1 = new TestBall(50, 50, 0.5f, 0.5f);
-            TestBall ball2 = new TestBall(20, 20, -0.5f, -0.5f);
-            TestBall ball3 = new TestBall(70, 70, -0.5f, 0.5f);
-            balls[0] = ball1;
-            balls[1] = ball2;
-            balls[2] = ball3;
-            api.setBalls(balls);
-
-
-            // Act
-            Logic.Logic.updateBoard();
-
-            // Assert
-            Assert.That(ball.x, Is.EqualTo(50.5f));
-            Assert.That(ball.y, Is.EqualTo(50.5f));
-        }*/
     }
 }
