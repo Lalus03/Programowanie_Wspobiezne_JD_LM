@@ -20,14 +20,17 @@ namespace Data
         float getSize();
         float getMass();
         void destroy();
-        #nullable enable
-        event EventHandler<DataEventArgs>? ChangedPosition;
+        
+        event EventHandler<DataEventArgs> ChangedPosition;
     }
+ 
+
+        
 
     internal class Ball : IBall
     {
-        #nullable enable
-        public event EventHandler<DataEventArgs>? ChangedPosition;
+        
+        public event EventHandler<DataEventArgs> ChangedPosition;
 
         private float size { get; set; }
         private float density { get; set; }
