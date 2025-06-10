@@ -87,23 +87,20 @@ namespace Model
         }
         private void UpdatePosition()
         {
-            for (int i = 0; i < simulation.getCoordinates().Length; i++)
-            {
-                Vector2 pos = simulation.getCoordinates()[i];
+            var coords = simulation.getCoordinates();
+            if (drawBalls == null || coords == null)
+                return;
 
-                // Dodanie sprawdzenia null
+            int count = Math.Min(drawBalls.Length, coords.Length);
+            for (int i = 0; i < count; i++)
+            {
                 if (drawBalls[i] != null)
                 {
-                    drawBalls[i].x = pos.X;
-                    drawBalls[i].y = pos.Y;
-                }
-                else
-                {
-                    Debug.WriteLine($"drawBalls[{i}] jest null.");
+                    drawBalls[i].x = coords[i].X;
+                    drawBalls[i].y = coords[i].Y;
                 }
             }
         }
-
         public override void StartSimulation()
         {
             //button

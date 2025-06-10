@@ -6,39 +6,55 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Runtime.Serialization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml;
+using System.Xml.Schema;
+using System.Xml.Serialization;
 
+[assembly: InternalsVisibleTo("Program.XmlSerializers")]
 namespace Data
 {
     public interface IBall
     {
-        Vector2 pos { get; }
+        Vector2 Pos { get; }
         Vector2 vel { get; set; }
+        int ID { get; }
         float getSize();
         float getMass();
         void destroy();
-        
-        event EventHandler<DataEventArgs> ChangedPosition;
+        #nullable enable
+        event EventHandler<DataEventArgs>? ChangedPosition;
     }
- 
 
-        
-
+    
     internal class Ball : IBall
     {
-        
-        public event EventHandler<DataEventArgs> ChangedPosition;
+        #nullable enable
+        public event EventHandler<DataEventArgs>? ChangedPosition;
 
         private float size { get; set; }
         private float density { get; set; }
         public Vector2 pos { get; private set; }
         private Vector2 _vel { get; set; }
-        public static readonly float maxVelocity = 2.0f;
+        public static readonly float maxVelocity = 0.2f;
         private bool running;
         private Thread thread;
+        Stopwatch stopwatch;
+        private DataLogger logger;
+        private readonly Object lockObject = new Object();
+        public int ID { get; }
+
+
+        public Vector2 Pos
+        {
+            get => pos;
+        }
+        public Ball(){}
 
         public float getSize() 
         { 
@@ -46,30 +62,43 @@ namespace Data
         }
 
         Random rnd = new Random();
-        public Ball(int maxX, int maxY)
+        public Ball(int ID, int maxX, int maxY)
         {
+            this.ID = ID;
             this.size = 10.0f;
             this.density = 10;
             this.pos = new Vector2(randomPosition(maxX), randomPosition(maxY));
             this.vel = new Vector2(randomVelocity(), randomVelocity());
             this.running = true;
+            stopwatch = new Stopwatch();
+            this.logger = DataLogger.GetInstance();
             this.thread = new Thread(() =>
             {
-                while (this.running)
+                try
                 {
-                    try
+                    while (this.running)
                     {
-                        move();
-                        Thread.Sleep(10);
-                    }
-                    catch (ThreadInterruptedException)
-                    {
-                        Debug.WriteLine("Ball thread interrupted.");
+                        float time = stopwatch.ElapsedMilliseconds;
+                        stopwatch.Restart();
+                        stopwatch.Start();
+                        move(time);
+                        lock (lockObject)
+                        {
+                            logger.addToQueue(this);
+                        }
+                        int timeToSleep = (int)Math.Ceiling(Math.Sqrt(Math.Pow(this.vel.X * 100, 2) + Math.Pow(this.vel.Y * 100, 2)));
+                        if (timeToSleep < 10)
+                        {
+                            timeToSleep = 10;
+                        }
+                        Thread.Sleep(timeToSleep);
                     }
                 }
-                Debug.WriteLine("Ball thread exiting...");
+                catch (ThreadInterruptedException)
+                {
+                    Debug.WriteLine("Thread killed");
+                }
             });
-
             thread.IsBackground = true;
             thread.Start();
         }
@@ -87,24 +116,18 @@ namespace Data
             return (float)(4 / 3 * Math.PI * Math.Pow(size/2, 3)) * density; 
         }
 
-        private void move()
+        private void move(float time)
         {
-            this.pos += vel;
+            this.pos += time * vel;
             DataEventArgs args = new DataEventArgs(pos);
             ChangedPosition?.Invoke(this, args);
         }
 
         public void destroy()
         {
-            this.running = false; // Ustaw flagę, aby zatrzymać pętlę w wątku
-            if (thread != null && thread.IsAlive)
-            {
-                Debug.WriteLine("Waiting for ball thread to stop...");
-                thread.Join(); // Poczekaj na zakończenie wątku
-                Debug.WriteLine("Ball thread stopped.");
-            }
+            this.running = false;
+            this.thread.Interrupt();
         }
-
 
         public Vector2 vel
         {
@@ -114,9 +137,10 @@ namespace Data
                 if (_vel != value)
                 {
                     _vel = value;
-                    move();
+                    move(10.0f);
                 }
             }
         }
+
     }
 }

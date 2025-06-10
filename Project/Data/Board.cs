@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Numerics;
 
 namespace Data
 {
@@ -53,19 +47,26 @@ namespace Data
             IBall[] balls = new IBall[amount];
             for (int i = 0; i < balls.Length; i++)
             {
-                balls[i] = new Ball(maxX, maxY);
+                balls[i] = new Ball(i, maxX, maxY);
             }
             this.balls = balls;
         }
 
-        public Board(){} //di workaround
+        public override void stopLogger()
+        {
+            DataLogger.GetInstance().stopRunning();
+        }
+
+        public Board()
+        {
+        }
 
         public override Vector2[] getCoordinates()
         {
             Vector2[] coordinates = new Vector2[balls.Length];
             for (int i = 0; i < balls.Length; i++)
             {
-                Vector2 pos = balls[i].pos;
+                Vector2 pos = balls[i].Pos;
                 coordinates[i] = pos;
             }
             return coordinates;

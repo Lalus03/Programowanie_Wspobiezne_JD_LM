@@ -1,18 +1,10 @@
 ﻿using Data;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Diagnostics;
-using System.Linq;
+using System.IO;
 using System.Numerics;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Runtime.Remoting.Messaging;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace Logic
 {
@@ -24,7 +16,7 @@ namespace Logic
         private IBall[] balls;
         private ObservableCollection<IBall> observableData = new ObservableCollection<IBall>();
         public readonly object lockk = new object();
-
+        
         public Simulation(DataAbstractAPI board = null)
         {
             if (board == null)
@@ -55,7 +47,8 @@ namespace Logic
 
         public override void startSimulation()
         {
-            if(!running)
+            string logFileName = $"Logger_{DateTime.Now:yyyyMMdd_HHmmss}.xml";
+            if (!running)
             {
                 this.running = true;
                 mainLoop();
@@ -66,54 +59,54 @@ namespace Logic
         {
             if (running)
             {
-                Debug.WriteLine("Stopping simulation...");
-                this.running = false; // Ustaw flagę, aby zatrzymać pętlę
-                if (collisionThread != null && collisionThread.IsAlive)
-                {
-                    Debug.WriteLine("Waiting for collision thread to stop...");
-                    collisionThread.Join(); // Poczekaj na zakończenie wątku
-                    Debug.WriteLine("Collision thread stopped.");
-                }
+                this.running = false;
+                this.collisionThread.Interrupt();
                 foreach (IBall b in balls)
                 {
-                    Debug.WriteLine($"Stopping ball thread for ball at position {b.pos}...");
-                    b.destroy(); // Zatrzymaj wątki kulek
+                    b.destroy();
                 }
-                Debug.WriteLine("All ball threads stopped.");
+                DataLogger.GetInstance().stopRunning(); // Dodaj to!
             }
         }
-
 
         private void mainLoop()
         {
             collisionThread = new Thread(() =>
             {
-                while (running)
+                try
                 {
-                    lookForCollisions();
-                    Thread.Sleep(5);
+                    while (running)
+                    {
+                        lookForCollisions();
+                        Thread.Sleep(5);
+                    }
                 }
-                Debug.WriteLine("Collision thread exiting...");
+                catch (ThreadInterruptedException) 
+                {
+                    Debug.WriteLine("Thread killed");
+                }
             });
             collisionThread.IsBackground = true;
             collisionThread.Start();
         }
 
-
         private void lookForCollisions()
         {
             foreach (IBall ball1 in balls)
             {
-                checkBorderCollisionForBall(ball1);
-                foreach (IBall ball2 in balls)
+                lock(lockk)
                 {
-                    if (ball1 == ball2)
-                    { continue; }
-                    Vector2 tmp1 = ball1.pos;
-                    Vector2 tmp2 = ball2.pos;
-                    if (Math.Sqrt((tmp1.X - tmp2.X) * (tmp1.X - tmp2.X) + (tmp1.Y - tmp2.Y) * (tmp1.Y - tmp2.Y)) <= ball1.getSize() / 2 + ball2.getSize() / 2)
+                    checkBorderCollisionForBall(ball1);
+                    foreach (IBall ball2 in balls)
                     {
-                        ballCollision(ball1, ball2);
+                        if (ball1 == ball2)
+                        { continue; }
+                        Vector2 tmp1 = ball1.Pos;
+                        Vector2 tmp2 = ball2.Pos;
+                        if (Math.Sqrt((tmp1.X - tmp2.X) * (tmp1.X - tmp2.X) + (tmp1.Y - tmp2.Y) * (tmp1.Y - tmp2.Y)) <= ball1.getSize() / 2 + ball2.getSize() / 2)
+                        {
+                            ballCollision(ball1, ball2);
+                        }
                     }
                 }
             }
@@ -122,8 +115,8 @@ namespace Logic
         private void ballCollision(IBall ball1, IBall ball2)
         {
             // Oblicz wektor normalny
-            float dx = ball2.pos.X - ball1.pos.X;
-            float dy = ball2.pos.Y - ball1.pos.Y;
+            float dx = ball2.Pos.X - ball1.Pos.X;
+            float dy = ball2.Pos.Y - ball1.Pos.Y;
             float distance = (float)Math.Sqrt(dx * dx + dy * dy); // odległość między kulami
             float n_x = dx / distance; // składowa x wektora normalnego
             float n_y = dy / distance; // składowa y wektora normalnego
@@ -157,15 +150,33 @@ namespace Logic
         {
             lock(lockk)
             {
-                if (ball.pos.X + ball.getSize() >= board.sizeX || ball.pos.X + ball.vel.X + ball.getSize() >= board.sizeX ||
-                    ball.pos.X <= 0 || ball.pos.X + ball.vel.X <= 0)
+                if (ball.Pos.X + ball.getSize() >= board.sizeX || ball.Pos.X + ball.vel.X + ball.getSize() >= board.sizeX)
                 {
-                    Logic.changeXdirection(ball);
+                    if (ball.vel.X > 0)
+                    {
+                        Logic.changeXdirection(ball);
+                    }
                 }
-                if (ball.pos.Y + ball.getSize() >= board.sizeY || ball.pos.Y + ball.vel.Y + ball.getSize() >= board.sizeY ||
-                    ball.pos.Y <= 0 || ball.pos.Y + ball.vel.Y <= 0)
+                else if (ball.Pos.X <= 0 || ball.Pos.X + ball.vel.X <= 0)
                 {
-                    Logic.changeYdirection(ball);
+                    if (ball.vel.X < 0)
+                    {
+                        Logic.changeXdirection(ball);
+                    }
+                }
+                if (ball.Pos.Y + ball.getSize() >= board.sizeY || ball.Pos.Y + ball.vel.Y + ball.getSize() >= board.sizeY)
+                {
+                    if (ball.vel.Y > 0)
+                    {
+                        Logic.changeYdirection(ball);
+                    }
+                }
+                else if (ball.Pos.Y <= 0 || ball.Pos.Y + ball.vel.Y <= 0)
+                {
+                    if (ball.vel.Y < 0)
+                    {
+                        Logic.changeYdirection(ball);
+                    }
                 }
             }
         }
@@ -184,6 +195,8 @@ namespace Logic
         }
         public override void getBoardParameters(int x, int y, int ballsAmount)
         {
+            string logFileName = $"Logger_{DateTime.Now:yyyyMMdd_HHmmss}.xml";
+            DataLogger.ResetInstance(logFileName); // <-- To musi być przed tworzeniem kul!
             board.setBoardParameters(x, y, ballsAmount);
             foreach (IBall ball in board.getBalls())
             {
@@ -193,6 +206,7 @@ namespace Logic
             this.balls = board.getBalls();
         }
 
+
         public override void setBalls(IBall[] balls)
         {
             this.board.setBalls(balls);
@@ -201,7 +215,7 @@ namespace Logic
         private void sendUpdate(object sender, DataEventArgs e)
         {
             IBall ball  = (IBall)sender;
-            Vector2 pos = ball.pos;
+            Vector2 pos = ball.Pos;
             LogicEventArgs args = new LogicEventArgs(pos);
             OnPropertyChanged(args);
         }
