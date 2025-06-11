@@ -21,7 +21,7 @@ namespace Data
 {
     internal sealed class DataLogger
     {
-        private ConcurrentQueue<BallRecord> ballsQueue;
+        private ConcurrentQueue<CollisionRecord> collisionQueue;
         private string filename;
         private CancellationTokenSource StateChange = new CancellationTokenSource();
         private bool isRunning;
@@ -53,7 +53,7 @@ namespace Data
             string path = Directory.GetParent(Environment.CurrentDirectory).Parent.Parent.Parent.Parent.FullName;
             this.filename = Path.Combine(path, filename);
             File.Create(this.filename).Close();
-            ballsQueue = new ConcurrentQueue<BallRecord>();
+            collisionQueue = new ConcurrentQueue<CollisionRecord>();
             this.isRunning = true;
             Task.Run(writeDataToLogger);
         }
@@ -62,14 +62,13 @@ namespace Data
             isRunning = false;
         }
 
-        public void addToQueue(IBall ball)
+        public void LogCollision(CollisionRecord collision)
         {
             lock (lockObject)
             {
-                if (ballsQueue.Count < MaxBufferSize)
+                if (collisionQueue.Count < MaxBufferSize)
                 {
-                    BallRecord ballRecord = new BallRecord(ball.Pos.X, ball.Pos.Y, ball.vel.X, ball.vel.Y, ball.ID, DateTime.Now); 
-                    ballsQueue.Enqueue(ballRecord);
+                    collisionQueue.Enqueue(collision);
                     StateChange.Cancel();
                 }
                 else
@@ -78,6 +77,7 @@ namespace Data
                 }
             }
         }
+
 
         public async void writeDataToLogger()
         {
@@ -94,11 +94,11 @@ namespace Data
 
                     while (this.isRunning)
                     {
-                        if (!ballsQueue.IsEmpty)
+                        if (!collisionQueue.IsEmpty)
                         {
-                            while (ballsQueue.TryDequeue(out BallRecord ball))
+                            while (collisionQueue.TryDequeue(out CollisionRecord ball))
                             {
-                                DataContractSerializer xmlSer = new DataContractSerializer(typeof(BallRecord));
+                                DataContractSerializer xmlSer = new DataContractSerializer(typeof(CollisionRecord));
                                 xmlSer.WriteObject(writer, ball);
                                 writer.Flush();
                                 await Task.Delay(Timeout.Infinite, StateChange.Token).ContinueWith(_ => { });

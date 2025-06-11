@@ -84,7 +84,7 @@ namespace Data
                         move(time);
                         lock (lockObject)
                         {
-                            logger.addToQueue(this);
+                         //   logger.addToQueue(this);
                         }
                         int timeToSleep = (int)Math.Ceiling(Math.Sqrt(Math.Pow(this.vel.X * 100, 2) + Math.Pow(this.vel.Y * 100, 2)));
                         if (timeToSleep < 10)
@@ -98,7 +98,10 @@ namespace Data
                 {
                     Debug.WriteLine("Thread killed");
                 }
-            });
+            })
+            {
+
+            };
             thread.IsBackground = true;
             thread.Start();
         }

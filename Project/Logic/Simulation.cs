@@ -65,7 +65,7 @@ namespace Logic
                 {
                     b.destroy();
                 }
-                DataLogger.GetInstance().stopRunning(); // Dodaj to!
+                DataLogger.GetInstance().stopRunning(); 
             }
         }
 
@@ -114,6 +114,15 @@ namespace Logic
 
         private void ballCollision(IBall ball1, IBall ball2)
         {
+            DataLogger.GetInstance().LogCollision(
+        new CollisionRecord(
+            ball1.ID,
+            ball2.ID,
+            "Ball",
+            ball1.Pos,
+            DateTime.Now
+        )
+    );
             // Oblicz wektor normalny
             float dx = ball2.Pos.X - ball1.Pos.X;
             float dy = ball2.Pos.Y - ball1.Pos.Y;
@@ -148,12 +157,21 @@ namespace Logic
 
         public void checkBorderCollisionForBall(IBall ball)
         {
-            lock(lockk)
+            lock (lockk)
             {
                 if (ball.Pos.X + ball.getSize() >= board.sizeX || ball.Pos.X + ball.vel.X + ball.getSize() >= board.sizeX)
                 {
                     if (ball.vel.X > 0)
                     {
+                        DataLogger.GetInstance().LogCollision(
+                            new CollisionRecord(
+                                ball.ID,
+                                null,
+                                "Wall",
+                                ball.Pos,
+                                DateTime.Now
+                            )
+                        );
                         Logic.changeXdirection(ball);
                     }
                 }
@@ -161,6 +179,15 @@ namespace Logic
                 {
                     if (ball.vel.X < 0)
                     {
+                        DataLogger.GetInstance().LogCollision(
+                            new CollisionRecord(
+                                ball.ID,
+                                null,
+                                "Wall",
+                                ball.Pos,
+                                DateTime.Now
+                            )
+                        );
                         Logic.changeXdirection(ball);
                     }
                 }
@@ -168,6 +195,15 @@ namespace Logic
                 {
                     if (ball.vel.Y > 0)
                     {
+                        DataLogger.GetInstance().LogCollision(
+                            new CollisionRecord(
+                                ball.ID,
+                                null,
+                                "Wall",
+                                ball.Pos,
+                                DateTime.Now
+                            )
+                        );
                         Logic.changeYdirection(ball);
                     }
                 }
@@ -175,11 +211,21 @@ namespace Logic
                 {
                     if (ball.vel.Y < 0)
                     {
+                        DataLogger.GetInstance().LogCollision(
+                            new CollisionRecord(
+                                ball.ID,
+                                null,
+                                "Wall",
+                                ball.Pos,
+                                DateTime.Now
+                            )
+                        );
                         Logic.changeYdirection(ball);
                     }
                 }
             }
         }
+
 
         public override Vector2[] getCoordinates()
         {
@@ -196,7 +242,7 @@ namespace Logic
         public override void getBoardParameters(int x, int y, int ballsAmount)
         {
             string logFileName = $"Logger_{DateTime.Now:yyyyMMdd_HHmmss}.xml";
-            DataLogger.ResetInstance(logFileName); // <-- To musi być przed tworzeniem kul!
+            DataLogger.ResetInstance(logFileName); // przed tworzeniem kul
             board.setBoardParameters(x, y, ballsAmount);
             foreach (IBall ball in board.getBalls())
             {
